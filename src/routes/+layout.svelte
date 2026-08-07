@@ -540,7 +540,7 @@
 
 			if ($isLastActiveTab) {
 				if ($settings?.notificationEnabled ?? false) {
-					new Notification(`${data.title} / Open WebUI`, {
+					new Notification(`${data.title} / aloGPT`, {
 						body: timeStr,
 						icon: `${WEBUI_BASE_URL}/static/favicon.png`
 					});
@@ -675,7 +675,7 @@
 
 					if ($isLastActiveTab) {
 						if ($settings?.notificationEnabled ?? false) {
-							new Notification(`${displayTitle} / Open WebUI`, {
+							new Notification(`${displayTitle} / aloGPT`, {
 								body: contentPreview,
 								icon: `${WEBUI_BASE_URL}/static/favicon.png`
 							});
@@ -782,7 +782,7 @@
 
 				if ($isLastActiveTab) {
 					if ($settings?.notificationEnabled ?? false) {
-						new Notification(`${title} / Open WebUI`, {
+						new Notification(`${title} / aloGPT`, {
 							body: data?.content,
 							icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
 						});
@@ -1165,15 +1165,17 @@
 		// Initialize i18n even if we didn't get a backend config,
 		// so `/error` can show something that's not `undefined`.
 
-		initI18n(localStorage?.locale);
-		if (!localStorage.locale) {
+		initI18n(backendConfig?.default_locale || localStorage?.locale);
+		if (backendConfig?.default_locale) {
+			changeLanguage(backendConfig.default_locale);
+			localStorage.locale = backendConfig.default_locale;
+			dayjs.locale(backendConfig.default_locale);
+		} else if (!localStorage.locale) {
 			const languages = await getLanguages();
 			const browserLanguages = navigator.languages
 				? navigator.languages
 				: [navigator.language || navigator.userLanguage];
-			const lang = backendConfig?.default_locale
-				? backendConfig.default_locale
-				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
+			const lang = bestMatchingLanguage(languages, browserLanguages, 'en-US');
 			changeLanguage(lang);
 			dayjs.locale(lang);
 		}

@@ -401,13 +401,14 @@ input[type='number'] {
 
 .ProseMirror p.is-editor-empty:first-child::before {
 	content: attr(data-placeholder);
-	float: left;
+	float: inline-start;
 	/* Below color is from tailwind, and has the proper contrast
 	text-gray-600 from: https://tailwindcss.com/docs/color */
 	color: #676767;
 	pointer-events: none;
+	height: 0;
 
-	@apply line-clamp-1 absolute;
+	@apply line-clamp-1;
 }
 
 /* #676767 is 3.17:1 on the dark canvas; the light value already passes. */

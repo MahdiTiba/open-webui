@@ -40,6 +40,7 @@ RUN npm ci --force
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
+ENV NODE_OPTIONS="--dns-result-order=ipv4first --max-old-space-size=4096"
 RUN npm run build
 
 ######## WebUI backend ########
@@ -183,6 +184,9 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
+
+COPY backend/start.sh /app/backend/start.sh
+RUN chmod +x /app/backend/start.sh
 
 # The backend rewrites its bundled static assets (favicons, splash, manifest,
 # loader.js, ...) under open_webui/static at startup. Make that directory

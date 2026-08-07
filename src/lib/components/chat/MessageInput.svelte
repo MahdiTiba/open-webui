@@ -1745,6 +1745,11 @@
 													bind:this={chatInputElement}
 													id="chat-input"
 													editable={!showInputModal}
+													dir={$settings?.chatDirection && $settings.chatDirection !== 'auto'
+														? $settings.chatDirection
+														: typeof document !== 'undefined'
+															? document.documentElement.dir || 'auto'
+															: 'auto'}
 													onChange={(content) => {
 														prompt = content.md;
 														inputContent = content;
@@ -1763,7 +1768,7 @@
 															navigator.maxTouchPoints > 0 ||
 															navigator.msMaxTouchPoints > 0
 														)}
-													placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
+													placeholder={placeholder ? placeholder : $i18n.t('Ask a question')}
 													largeTextAsFile={($settings?.largeTextAsFile ?? false) && !shiftKey}
 													autocomplete={$config?.features?.enable_autocomplete_generation &&
 														($settings?.promptAutocomplete ?? false)}

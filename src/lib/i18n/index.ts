@@ -18,6 +18,12 @@ const createI18nStore = (i18n: i18nType) => {
 		i18nWritable.set(i18n);
 		if (typeof document !== 'undefined') {
 			document.documentElement.setAttribute('lang', lang);
+			const rtlLangs = ['fa-IR', 'fa', 'ar', 'he', 'ur'];
+			const base = (lang || '').split('-')[0];
+			document.documentElement.setAttribute(
+				'dir',
+				rtlLangs.includes(lang) || rtlLangs.includes(base) ? 'rtl' : 'ltr'
+			);
 		}
 	});
 	return i18nWritable;
@@ -81,6 +87,12 @@ export const getLanguages = async () => {
 };
 export const changeLanguage = (lang: string) => {
 	document.documentElement.setAttribute('lang', lang);
+	const rtlLangs = ['fa-IR', 'fa', 'ar', 'he', 'ur'];
+	const base = (lang || '').split('-')[0];
+	document.documentElement.setAttribute(
+		'dir',
+		rtlLangs.includes(lang) || rtlLangs.includes(base) ? 'rtl' : 'ltr'
+	);
 	i18next.changeLanguage(lang);
 };
 

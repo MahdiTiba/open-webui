@@ -570,12 +570,20 @@
 				class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] w-full hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none"
 				type="button"
 				on:click={async () => {
-					const res = await userSignOut();
-					user.set(null);
-					localStorage.removeItem('token');
-
-					location.href = res?.redirect_url ?? '/auth';
 					show = false;
+					try {
+						const res = await userSignOut();
+						user.set(null);
+						localStorage.removeItem('token');
+						document.cookie = 'token=; Max-Age=0; path=/';
+						location.href = res?.redirect_url ?? '/auth?form=logout';
+					} catch (error) {
+						console.error(error);
+						user.set(null);
+						localStorage.removeItem('token');
+						document.cookie = 'token=; Max-Age=0; path=/';
+						location.href = '/auth?form=logout';
+					}
 				}}
 			>
 				<div class="self-center">

@@ -59,6 +59,12 @@
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
 
 	const i18n = getContext('i18n');
+	const rtlLangs = ['fa-IR', 'fa', 'ar', 'he', 'ur'];
+	$: chatTitleDir = (() => {
+		const lang = $i18n?.language || '';
+		const base = lang.split('-')[0];
+		return rtlLangs.includes(lang) || rtlLangs.includes(base) ? 'rtl' : 'ltr';
+	})();
 
 	const dispatch = createEventDispatcher();
 
@@ -609,10 +615,10 @@
 						</div>
 					{/if}
 					<div
-						dir="auto"
-						class="text-left self-center overflow-hidden w-full h-[20px] truncate {unread
+						dir={chatTitleDir}
+						class="text-start self-center overflow-hidden w-full h-[20px] truncate {unread
 							? 'font-normal text-gray-800 dark:text-gray-200'
-							: ''} {showInlineActions && !readonly ? 'pr-12' : ''}"
+							: ''} {showInlineActions && !readonly ? 'pe-12' : ''}"
 					>
 						{title}
 					</div>

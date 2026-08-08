@@ -17,6 +17,20 @@
 	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
+	const RTL_FIRST_CHAR_RE =
+		/[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+	const LTR_FIRST_CHAR_RE = /[A-Za-z\u00C0-\u024F]/;
+
+	const detectInputTextDir = (text: string): 'ltr' | 'rtl' => {
+		if (!text) return 'ltr';
+		const plain = text.replace(/[#*_`>~\[\]()!\-\\]/g, '');
+		for (const ch of plain) {
+			if (LTR_FIRST_CHAR_RE.test(ch)) return 'ltr';
+			if (RTL_FIRST_CHAR_RE.test(ch)) return 'rtl';
+		}
+		return 'ltr';
+	};
+
 	const dispatch = createEventDispatcher();
 
 	import {
@@ -148,6 +162,7 @@
 	$: canCompact = !!history?.currentId;
 
 	export let prompt = '';
+	$: inputTextDir = detectInputTextDir(prompt);
 	export let files = [];
 
 	export let selectedToolIds = [];
@@ -1587,7 +1602,7 @@
 							class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border {$temporaryChatEnabled
 								? 'border-dashed border-gray-100 dark:border-gray-800 hover:border-gray-200 focus-within:border-gray-200 hover:dark:border-gray-700 focus-within:dark:border-gray-700'
 								: ' border-gray-100/30 dark:border-gray-850/30 hover:border-gray-200 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800'}  transition px-0.5 bg-white/5 dark:bg-gray-500/5 backdrop-blur-sm dark:text-gray-100"
-							dir={$settings?.chatDirection ?? 'auto'}
+							dir="ltr"
 						>
 							{#if atSelectedModel !== undefined}
 								<div class="px-2.5 pt-2.5 text-left w-full flex flex-col z-10">
@@ -1619,7 +1634,7 @@
 							{#if files.length > 0}
 								<div
 									class="mx-2 mt-2 pb-1 flex items-center flex-wrap gap-1.5"
-									dir={$settings?.chatDirection ?? 'auto'}
+									dir="ltr"
 								>
 									{#each files as file, fileIdx}
 										{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
@@ -1711,9 +1726,9 @@
 								</div>
 							{/if}
 
-							<div class="px-2">
+							<div class="px-2" dir={inputTextDir}>
 								<div
-									class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pb-0.5 px-1 resize-none h-fit max-h-96 overflow-auto {files.length ===
+									class="scrollbar-hidden text-start bg-transparent dark:text-gray-100 outline-hidden w-full pb-0.5 px-1 resize-none h-fit max-h-96 overflow-auto {files.length ===
 									0
 										? atSelectedModel !== undefined
 											? 'pt-1'
@@ -1746,10 +1761,8 @@
 													id="chat-input"
 													editable={!showInputModal}
 													dir={$settings?.chatDirection && $settings.chatDirection !== 'auto'
-														? $settings.chatDirection
-														: typeof document !== 'undefined'
-															? document.documentElement.dir || 'auto'
-															: 'auto'}
+														? String($settings.chatDirection).toLowerCase()
+														: inputTextDir}
 													onChange={(content) => {
 														prompt = content.md;
 														inputContent = content;

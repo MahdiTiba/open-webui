@@ -131,7 +131,7 @@
 
 <div
 	class=" flex w-full user-message group"
-	dir={$settings.chatDirection}
+	dir="ltr"
 	id="message-{message.id}"
 	style="scroll-margin-top: 3rem;"
 >
@@ -172,7 +172,7 @@
 				{#if message.files}
 					<div
 						class="mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap"
-						dir={$settings?.chatDirection ?? 'auto'}
+						dir="ltr"
 					>
 						{#each message.files as file}
 							{@const fileUrl =
@@ -379,10 +379,11 @@
 										message.files ? 'rounded-tr-lg' : ''
 									}`
 								: ' w-full'}"
+							dir="auto"
 						>
 							{#if message.content}
 								{#if $settings?.renderMarkdownInUserMessages ?? true}
-									<div class="markdown-prose">
+									<div class="markdown-prose" dir="auto">
 										<Markdown
 											id={`${chatId}-${message.id}`}
 											content={message.content}
@@ -391,10 +392,7 @@
 										/>
 									</div>
 								{:else}
-									<div
-										class="whitespace-pre-wrap text-[0.9375rem]"
-										dir={$settings?.chatDirection ?? 'auto'}
-									>
+									<div class="whitespace-pre-wrap text-[0.9375rem]" dir="auto">
 										{message.content}
 									</div>
 								{/if}

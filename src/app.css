@@ -30,7 +30,9 @@ html {
 	padding-block: calc(6px * var(--app-text-scale, 1));
 }
 
-#sidebar-chat-item div[dir='auto'] {
+#sidebar-chat-item div[dir='auto'],
+#sidebar-chat-item div[dir='rtl'],
+#sidebar-chat-item div[dir='ltr'] {
 	/* chat title line height follows the text scale */
 	height: calc(20px * var(--app-text-scale, 1));
 	line-height: calc(20px * var(--app-text-scale, 1));
@@ -393,6 +395,7 @@ input[type='number'] {
 
 .ProseMirror {
 	@apply h-full min-h-fit max-h-full whitespace-pre-wrap;
+	text-align: start;
 }
 
 .ProseMirror:focus {

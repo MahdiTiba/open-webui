@@ -215,9 +215,21 @@
 	export let dir = 'auto';
 	export let placeholder = $i18n.t('Type here...');
 	let _placeholder = placeholder;
+	let _dir = dir;
 
 	$: if (placeholder !== _placeholder) {
 		setPlaceholder();
+	}
+
+	$: if (dir !== _dir) {
+		_dir = dir;
+		if (element) {
+			element.setAttribute('dir', dir);
+		}
+		if (editor?.view?.dom) {
+			editor.view.dom.setAttribute('dir', dir);
+			editor.view.dispatch(editor.state.tr);
+		}
 	}
 
 	const setPlaceholder = () => {
@@ -968,7 +980,7 @@
 			editorProps: {
 				// the tiptap placeholder never becomes the field's accessible name;
 				// function form so a placeholder change is picked up after mount
-				attributes: () => ({ id, 'aria-label': _placeholder }),
+				attributes: () => ({ id, 'aria-label': _placeholder, dir: _dir }),
 				handleDrop: (view, event) => {
 					// Intercept sidebar chat item drops to prevent ProseMirror
 					// from inserting the raw JSON as text. The actual handling

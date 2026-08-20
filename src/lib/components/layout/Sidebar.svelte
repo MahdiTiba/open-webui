@@ -1677,8 +1677,38 @@
 				<div
 					class=" sidebar-bg-gradient-to-t bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mt-6"
 				></div>
-				<div class="flex flex-col">
+				<div class="flex flex-col gap-1">
 					{#if $user !== undefined && $user !== null}
+						<div class="flex px-0.5">
+							<a
+								href="/subscriptions"
+								class="ml-auto inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] leading-none font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/20 dark:border-emerald-400/20 transition"
+								draggable="false"
+								on:click={() => {
+									if ($mobile) {
+										showSidebar.set(false);
+									}
+								}}
+								aria-label="اشتراک کاربری"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.5"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									class="size-3.5 shrink-0"
+									aria-hidden="true"
+								>
+									<path
+										d="M12 3l2.09 4.24L19 8.27l-3.5 3.41.83 4.82L12 14.27 7.67 16.5l.83-4.82L5 8.27l4.91-1.03L12 3z"
+									/>
+								</svg>
+								<span>اشتراک کاربری</span>
+							</a>
+						</div>
 						<UserMenu
 							role={$user?.role}
 							profile={$config?.features?.enable_user_status ?? true}

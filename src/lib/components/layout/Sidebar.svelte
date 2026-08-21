@@ -7,6 +7,8 @@
 	import { page } from '$app/stores';
 	import {
 		user,
+		userPlan,
+		setUserPlan,
 		chats,
 		settings,
 		chatId,
@@ -59,6 +61,7 @@
 	} from '$lib/apis/folders';
 	import { createNewNote, getPinnedNoteList, toggleNotePinnedStatusById } from '$lib/apis/notes';
 	import { updateUserSettings } from '$lib/apis/users';
+	import { getCurrentPlan } from '$lib/apis/payments';
 	import { createNoteHandler } from '$lib/components/notes/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
@@ -146,6 +149,22 @@
 	let sharedFolders: any[] = [];
 
 	$: pinnedItems = $settings?.pinnedMenuItems ?? DEFAULT_PINNED_ITEMS;
+	$: subscriptionLabel = $userPlan?.name
+		? `اشتراک کاربری (${$userPlan.name})`
+		: 'اشتراک کاربری';
+
+	let loadedPlanForUser = '';
+	$: if ($user?.id && loadedPlanForUser !== $user.id) {
+		loadedPlanForUser = $user.id;
+		void (async () => {
+			try {
+				const me = await getCurrentPlan(localStorage.token);
+				setUserPlan(me?.plan, me?.plan_name);
+			} catch {
+				/* keep previous plan label */
+			}
+		})();
+	}
 
 	const isMenuItemVisible = (id) => {
 		switch (id) {
@@ -1673,23 +1692,23 @@
 				</SidebarSection>
 			</div>
 
-			<div class="px-1 pt-1 pb-1.5 sticky bottom-0 z-10 -mt-2 sidebar">
+			<div class="px-1 pt-1 pb-1.5 sticky bottom-0 z-10 -mt-2 sidebar min-w-0 w-full overflow-x-hidden">
 				<div
 					class=" sidebar-bg-gradient-to-t bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mt-6"
 				></div>
-				<div class="flex flex-col gap-1">
+				<div class="flex flex-col gap-1 min-w-0 w-full">
 					{#if $user !== undefined && $user !== null}
-						<div class="flex px-0.5">
+						<div class="flex px-0.5 w-full min-w-0">
 							<a
 								href="/subscriptions"
-								class="ml-auto inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] leading-none font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/20 dark:border-emerald-400/20 transition"
+								class="subscription-entry w-full min-w-0 max-w-full box-border inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] leading-none font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/20 dark:border-emerald-400/20 transition"
 								draggable="false"
 								on:click={() => {
 									if ($mobile) {
 										showSidebar.set(false);
 									}
 								}}
-								aria-label="اشتراک کاربری"
+								aria-label={subscriptionLabel}
 							>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
@@ -1706,7 +1725,7 @@
 										d="M12 3l2.09 4.24L19 8.27l-3.5 3.41.83 4.82L12 14.27 7.67 16.5l.83-4.82L5 8.27l4.91-1.03L12 3z"
 									/>
 								</svg>
-								<span>اشتراک کاربری</span>
+								<span class="subscription-entry-label">{subscriptionLabel}</span>
 							</a>
 						</div>
 						<UserMenu
@@ -1761,3 +1780,15 @@
 		</div>
 	{/if}
 {/if}
+
+<style>
+	.subscription-entry-label {
+		min-width: 0;
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		line-height: 1.2;
+	}
+</style>
+

@@ -229,10 +229,12 @@ class AuthsTable:
         self,
         id: str,
         db: AsyncSession | None = None,
+        *,
+        sync_django: bool = True,
     ) -> bool:
         """Remove a user and their auth credential in one transaction."""
         async with get_async_db_context(db) as session:
-            if not await Users.delete_user_by_id(id, db=session):
+            if not await Users.delete_user_by_id(id, db=session, sync_django=sync_django):
                 return False
             await session.execute(delete(Auth).where(Auth.id == id))
             await session.commit()

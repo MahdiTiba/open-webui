@@ -683,9 +683,11 @@ class UsersTable:
             await session.commit()
             return UserModel.model_validate(user)
 
-    async def delete_user_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
+    async def delete_user_by_id(self, id: str, db: AsyncSession | None = None, *, sync_django: bool = True) -> bool:
         from open_webui.models.chats import Chats
         from open_webui.models.groups import Groups
+
+        user = await self.get_user_by_id(id, db=db)
 
         # Remove User from Groups
         await Groups.remove_user_from_all_groups(id)
@@ -697,6 +699,10 @@ class UsersTable:
                 return False  # chats deletion failed
             await session.execute(delete(User).where(User.id == id))
             await session.commit()
+            if sync_django and user is not None:
+                from open_webui.utils.alogpt_sync import schedule_django_user_delete
+
+                schedule_django_user_delete(user)
             return True
 
     async def get_user_api_key_by_id(self, id: str, db: AsyncSession | None = None) -> str | None:

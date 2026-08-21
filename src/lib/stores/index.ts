@@ -17,6 +17,24 @@ export const WEBUI_DEPLOYMENT_ID = writable(null);
 
 export const config: Writable<Config | undefined> = writable(undefined);
 export const user: Writable<SessionUser | undefined> = writable(undefined);
+export const userPlan: Writable<{ id: string; name: string } | null> = writable(null);
+
+export const PLAN_LABELS: Record<string, string> = {
+	free: 'رایگان',
+	basic: 'پایه',
+	plus: 'پلاس',
+	pro: 'پرو',
+	enterprise: 'سازمانی'
+};
+
+export const setUserPlan = (plan?: string, planName?: string) => {
+	const id = plan || 'free';
+	userPlan.set({
+		id,
+		name: planName || PLAN_LABELS[id] || id
+	});
+	return id;
+};
 
 // Electron App
 export const isApp = writable(false);

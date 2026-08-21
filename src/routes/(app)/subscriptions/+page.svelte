@@ -1,26 +1,28 @@
 <script lang="ts">
-	import { showSidebar, WEBUI_NAME } from '$lib/stores';
+	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { toast } from 'svelte-sonner';
+	import { showSidebar, setUserPlan, user, WEBUI_NAME } from '$lib/stores';
+	import { getSessionUser } from '$lib/apis/auths';
+	import { getCurrentPlan, getPaymentPlans, startPayment } from '$lib/apis/payments';
 	import Check from '$lib/components/icons/Check.svelte';
+	import Modal from '$lib/components/common/Modal.svelte';
 
-	const plans = [
-		{
-			id: 'free',
+	type PlanId = 'free' | 'basic' | 'plus' | 'pro' | 'enterprise';
+
+	const planCopy: Record<
+		PlanId,
+		{ name: string; nameEn: string; featured?: boolean; badge?: string; features: string[] }
+	> = {
+		free: {
 			name: 'رایگان',
 			nameEn: 'Free',
-			price: null,
-			featured: false,
-			features: [
-				'مدل پایه',
-				'تعداد محدود پیام‌ها و آپلودها',
-				'امکان محدود ساخت تصویر',
-				'حافظه محدود'
-			]
+			features: ['مدل پایه', 'تعداد محدود پیام‌ها و آپلودها', 'امکان محدود ساخت تصویر', 'حافظه محدود']
 		},
-		{
-			id: 'basic',
+		basic: {
 			name: 'پایه',
 			nameEn: 'Basic',
-			price: '۳۹۹/۰۰۰',
 			featured: true,
 			badge: 'پیشنهادی',
 			features: [
@@ -30,12 +32,9 @@
 				'قابلیت Deep Research گسترده‌تر'
 			]
 		},
-		{
-			id: 'plus',
+		plus: {
 			name: 'پلاس',
 			nameEn: 'Plus',
-			price: '۵۹۹/۰۰۰',
-			featured: false,
 			features: [
 				'مدل پیشرفته Frontier Pro',
 				'۵ یا ۲۰ برابر استفاده بیشتر نسبت به Basic',
@@ -44,8 +43,155 @@
 				'حداکثر میزان حافظه و ظرفیت درک متن',
 				'دسترسی زودهنگام به قابلیت‌های آزمایشی'
 			]
+		},
+		pro: {
+			name: 'پرو',
+			nameEn: 'Pro',
+			features: ['همه امکانات پلاس', 'اولویت در پردازش', 'پشتیبانی اختصاصی']
+		},
+		enterprise: {
+			name: 'سازمانی',
+			nameEn: 'Enterprise',
+			features: ['همه امکانات پرو', 'مدیریت تیمی', 'توافق سطح خدمات']
 		}
-	];
+	};
+
+	let plans: Array<{
+		id: PlanId;
+		name: string;
+		nameEn: string;
+		amount: number | null;
+		currency: string;
+		purchasable: boolean;
+		featured: boolean;
+		badge?: string;
+		features: string[];
+	}> = (['free', 'basic', 'plus'] as PlanId[]).map((id) => ({
+		id,
+		...planCopy[id],
+		amount: null,
+		currency: 'IRT',
+		purchasable: false,
+		featured: Boolean(planCopy[id].featured)
+	}));
+
+	let currentPlan = 'free';
+	let payingPlan: string | null = null;
+	let resultOpen = false;
+	let resultSuccess = false;
+	let resultPlan = '';
+	let resultPlanName = '';
+	let resultConsumed = false;
+
+	const planLabel = (id: string) => planCopy[id as PlanId]?.name || id;
+
+	const formatAmount = (amount: number | null, currency: string) => {
+		if (amount === null || amount === undefined) return '';
+		const formatted = new Intl.NumberFormat('fa-IR').format(amount);
+		return currency === 'IRR' ? `${formatted} ریال` : formatted;
+	};
+
+	const applyCatalog = (catalog: any[]) => {
+		if (!Array.isArray(catalog) || catalog.length === 0) return;
+		const order: PlanId[] = ['free', 'basic', 'plus', 'pro', 'enterprise'];
+		plans = order
+			.map((id) => catalog.find((item) => item.id === id))
+			.filter(Boolean)
+			.filter((item) => item?.id === 'free' || item?.purchasable || Number(item?.amount || 0) > 0)
+			.map((item) => {
+				const copy = planCopy[item.id as PlanId] || {
+					name: item.name,
+					nameEn: item.id,
+					features: []
+				};
+				return {
+					id: item.id as PlanId,
+					name: copy.name || item.name,
+					nameEn: copy.nameEn || item.id,
+					amount: item.id === 'free' ? null : Number(item.amount || 0),
+					currency: item.currency || 'IRT',
+					purchasable: Boolean(item.purchasable),
+					featured: Boolean(copy.featured),
+					badge: copy.badge,
+					features: copy.features
+				};
+			});
+	};
+
+	const loadBilling = async () => {
+		const token = localStorage.token;
+		if (!token) return;
+		try {
+			const [catalog, me] = await Promise.all([getPaymentPlans(token), getCurrentPlan(token)]);
+			applyCatalog(catalog);
+			if (me?.plan) currentPlan = setUserPlan(me.plan, me.plan_name);
+		} catch (error) {
+			toast.error(typeof error === 'string' ? error : 'بارگذاری طرح‌ها ناموفق بود');
+		}
+	};
+
+	const openResultFromQuery = async () => {
+		const params = $page.url.searchParams;
+		const payment = params.get('payment');
+		if (payment !== 'success' && payment !== 'failed') return;
+		resultSuccess = payment === 'success';
+		resultPlan = params.get('plan') || '';
+		resultPlanName = planLabel(resultPlan);
+		resultOpen = true;
+		if (resultSuccess) {
+			currentPlan = setUserPlan(resultPlan || currentPlan);
+			try {
+				const sessionUser = await getSessionUser(localStorage.token);
+				if (sessionUser) await user.set(sessionUser);
+			} catch {
+				/* session refresh is best-effort */
+			}
+		}
+	};
+
+	const closeResult = async () => {
+		if (resultConsumed) return;
+		resultConsumed = true;
+		resultOpen = false;
+		if (resultSuccess) {
+			await goto('/');
+			return;
+		}
+		await goto('/subscriptions', { replaceState: true });
+	};
+
+	$: if (!resultOpen && resultPlan && !resultConsumed) {
+		void closeResult();
+	}
+
+	const pay = async (planId: PlanId, purchasable: boolean) => {
+		if (planId === currentPlan || payingPlan) return;
+		if (!purchasable) return;
+		payingPlan = planId;
+		try {
+			const result = await startPayment(localStorage.token, planId);
+			if (!result?.payment_url) {
+				throw 'آدرس درگاه دریافت نشد';
+			}
+			window.location.assign(result.payment_url);
+		} catch (error) {
+			payingPlan = null;
+			toast.error(typeof error === 'string' ? error : 'شروع پرداخت ناموفق بود');
+		}
+	};
+
+	const ctaLabel = (plan: { id: PlanId; featured?: boolean; purchasable: boolean }) => {
+		if (payingPlan === plan.id) return 'در حال انتقال به درگاه...';
+		if (plan.id === currentPlan) return 'پلن فعلی';
+		if (plan.id === 'free') return `انتخاب ${planCopy.free.name}`;
+		if (!plan.purchasable) return 'به‌زودی';
+		return plan.featured ? 'شروع با طرح پایه' : `پرداخت ${planCopy[plan.id].name}`;
+	};
+
+	onMount(async () => {
+		await loadBilling();
+		await openResultFromQuery();
+	});
 </script>
 
 <svelte:head>
@@ -68,7 +214,9 @@
 				<div class="mx-auto w-full max-w-6xl">
 					<header class="subscriptions-header text-center mb-10 sm:mb-12">
 						<p class="subscriptions-kicker">AloGPT</p>
-						<h1 class="subscriptions-title mt-2">اشتراک کاربری</h1>
+						<h1 class="subscriptions-title mt-2">
+							اشتراک کاربری ({planLabel(currentPlan)})
+						</h1>
 						<p class="subscriptions-subtitle mt-3 mx-auto max-w-xl">
 							طرح مناسب خود را انتخاب کنید و تجربه هوش مصنوعی را یک سطح بالاتر ببرید.
 						</p>
@@ -79,6 +227,7 @@
 							<article
 								class="plan-card group relative flex flex-col rounded-2xl p-6 sm:p-7"
 								class:plan-card--featured={plan.featured}
+								class:plan-card--current={plan.id === currentPlan}
 								style="--delay: {index * 80}ms"
 							>
 								{#if plan.badge}
@@ -93,9 +242,11 @@
 								</div>
 
 								<div class="plan-price mt-6">
-									{#if plan.price}
-										<span class="plan-price-value">{plan.price}</span>
-										<span class="plan-price-unit">تومان</span>
+									{#if plan.amount}
+										<span class="plan-price-value">{formatAmount(plan.amount, plan.currency)}</span>
+										{#if plan.currency !== 'IRR'}
+											<span class="plan-price-unit">تومان</span>
+										{/if}
 										<span class="plan-price-period">/ ماه</span>
 									{:else}
 										<span class="plan-price-value">رایگان</span>
@@ -113,8 +264,16 @@
 									{/each}
 								</ul>
 
-								<button type="button" class="plan-cta mt-8 w-full">
-									{plan.featured ? 'شروع با طرح پایه' : `انتخاب ${plan.name}`}
+								<button
+									type="button"
+									class="plan-cta mt-8 w-full"
+									disabled={plan.id === currentPlan ||
+										payingPlan !== null ||
+										(plan.id !== 'free' && !plan.purchasable) ||
+										plan.id === 'free'}
+									on:click={() => pay(plan.id, plan.purchasable)}
+								>
+									{ctaLabel(plan)}
 								</button>
 							</article>
 						{/each}
@@ -128,6 +287,51 @@
 		</div>
 	</div>
 </div>
+
+<Modal bind:show={resultOpen} size="xs" className="bg-white dark:bg-gray-900 rounded-2xl">
+	<div class="p-6 text-center" dir="rtl">
+		<div
+			class="mx-auto mb-4 flex size-12 items-center justify-center rounded-full {resultSuccess
+				? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300'
+				: 'bg-rose-500/15 text-rose-600 dark:text-rose-300'}"
+		>
+			{#if resultSuccess}
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					class="size-6"
+				>
+					<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
+				</svg>
+			{:else}
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					class="size-6"
+				>
+					<path d="M6 6l12 12M18 6L6 18" stroke-linecap="round" stroke-linejoin="round" />
+				</svg>
+			{/if}
+		</div>
+		<h2 class="text-lg font-bold text-gray-900 dark:text-gray-50">
+			{resultSuccess ? 'پرداخت موفق' : 'پرداخت ناموفق'}
+		</h2>
+		<p class="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">
+			{#if resultSuccess}
+				اشتراک «{resultPlanName}» برای شما فعال شد.
+			{:else}
+				پرداخت انجام نشد و طرح فعلی شما تغییر نکرد.
+			{/if}
+		</p>
+		<button type="button" class="plan-cta mt-6 w-full" on:click={closeResult}>تایید</button>
+	</div>
+</Modal>
 
 <style>
 	.subscriptions-shell {
@@ -362,14 +566,14 @@
 		border-color: rgba(255, 255, 255, 0.08);
 	}
 
-	.plan-cta:hover {
+	.plan-cta:hover:not(:disabled) {
 		transform: translateY(-1px);
 		background: rgba(16, 185, 129, 0.12);
 		border-color: rgba(16, 185, 129, 0.3);
 		color: rgb(4 120 87);
 	}
 
-	:global(.dark) .plan-cta:hover {
+	:global(.dark) .plan-cta:hover:not(:disabled) {
 		background: rgba(16, 185, 129, 0.16);
 		border-color: rgba(52, 211, 153, 0.35);
 		color: rgb(167 243 208);
@@ -382,10 +586,17 @@
 		box-shadow: 0 12px 24px -14px rgba(16, 185, 129, 0.95);
 	}
 
-	.plan-card--featured .plan-cta:hover {
+	.plan-card--featured .plan-cta:hover:not(:disabled) {
 		background: linear-gradient(135deg, #047857, #059669);
 		color: white;
 		box-shadow: 0 16px 28px -12px rgba(16, 185, 129, 1);
+	}
+
+	.plan-cta:disabled {
+		cursor: default;
+		opacity: 0.7;
+		transform: none;
+		box-shadow: none;
 	}
 
 	@keyframes rise {

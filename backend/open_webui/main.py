@@ -158,6 +158,7 @@ from open_webui.routers import (
     notes,
     ollama,
     openai,
+    payments,
     pipelines,
     prompts,
     retrieval,
@@ -797,6 +798,7 @@ app.include_router(configs.router, prefix='/api/v1/configs', tags=['configs'])
 
 app.include_router(auths.router, prefix='/api/v1/auths', tags=['auths'])
 app.include_router(users.router, prefix='/api/v1/users', tags=['users'])
+app.include_router(payments.router, prefix='/api/v1/payments', tags=['payments'])
 
 
 app.include_router(channels.router, prefix='/api/v1/channels', tags=['channels'])

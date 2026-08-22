@@ -211,7 +211,6 @@
 	) => {
 		if (busyPlan === plan.id) return 'در حال انتقال به درگاه...';
 		if (plan.id === activePlan) return 'پلن فعلی';
-		if (isLowerPlan(plan.id, activePlan)) return 'طرح پایین‌تر';
 		if (plan.id === 'free') return `انتخاب ${planCopy.free.name}`;
 		if (!plan.purchasable) return 'به‌زودی';
 		return plan.featured ? 'شروع با طرح پایه' : `پرداخت ${planCopy[plan.id].name}`;
@@ -245,7 +244,14 @@
 						<a href="/" class="subscriptions-back">بازگشت</a>
 					</div>
 					<header class="subscriptions-header text-center mb-10 sm:mb-12">
-						<p class="subscriptions-kicker">AloGPT</p>
+						<img
+							src="/static/login_logo.png"
+							alt=""
+							width="240"
+							height="80"
+							class="subscriptions-logo"
+						/>
+						<p class="subscriptions-kicker">aloGPT</p>
 						<h1 class="subscriptions-title mt-2">
 							اشتراک کاربری ({planLabel(currentPlan)})
 						</h1>
@@ -391,11 +397,12 @@
 	}
 
 	.subscriptions-kicker {
-		font-size: 0.75rem;
-		letter-spacing: 0.28em;
-		text-transform: uppercase;
+		font-size: 0.95rem;
+		letter-spacing: 0.18em;
+		text-transform: none;
 		color: rgb(5 150 105);
-		font-weight: 600;
+		font-weight: 650;
+		margin-top: 0.85rem;
 	}
 
 	:global(.dark) .subscriptions-kicker {
@@ -425,6 +432,16 @@
 
 	.subscriptions-header {
 		animation: rise 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+
+	.subscriptions-logo {
+		display: block;
+		margin: 0 auto;
+		height: 80px;
+		width: auto;
+		max-width: 240px;
+		object-fit: contain;
+		border-radius: 1.1rem;
 	}
 
 	.subscriptions-back {

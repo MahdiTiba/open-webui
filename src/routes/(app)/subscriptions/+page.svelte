@@ -11,6 +11,14 @@
 
 	type PlanId = 'free' | 'basic' | 'plus' | 'pro' | 'enterprise';
 
+	const PLAN_RANK: Record<PlanId, number> = {
+		free: 0,
+		basic: 1,
+		plus: 2,
+		pro: 3,
+		enterprise: 4
+	};
+
 	const planCopy: Record<
 		PlanId,
 		{ name: string; nameEn: string; featured?: boolean; badge?: string; features: string[] }
@@ -84,6 +92,22 @@
 	let resultConsumed = false;
 
 	const planLabel = (id: string) => planCopy[id as PlanId]?.name || id;
+
+	const planRank = (id: string) => PLAN_RANK[id as PlanId] ?? 0;
+
+	const isLowerPlan = (planId: PlanId, activePlan: string) =>
+		planRank(planId) < planRank(activePlan);
+
+	const isPlanDisabled = (
+		plan: { id: PlanId; purchasable: boolean },
+		activePlan: string,
+		busyPlan: string | null
+	) =>
+		plan.id === activePlan ||
+		busyPlan !== null ||
+		plan.id === 'free' ||
+		!plan.purchasable ||
+		isLowerPlan(plan.id, activePlan);
 
 	const formatAmount = (amount: number | null, currency: string) => {
 		if (amount === null || amount === undefined) return '';
@@ -165,7 +189,7 @@
 	}
 
 	const pay = async (planId: PlanId, purchasable: boolean) => {
-		if (planId === currentPlan || payingPlan) return;
+		if (planId === currentPlan || payingPlan || isLowerPlan(planId, currentPlan)) return;
 		if (!purchasable) return;
 		payingPlan = planId;
 		try {
@@ -180,9 +204,14 @@
 		}
 	};
 
-	const ctaLabel = (plan: { id: PlanId; featured?: boolean; purchasable: boolean }) => {
-		if (payingPlan === plan.id) return 'در حال انتقال به درگاه...';
-		if (plan.id === currentPlan) return 'پلن فعلی';
+	const ctaLabel = (
+		plan: { id: PlanId; featured?: boolean; purchasable: boolean },
+		activePlan: string,
+		busyPlan: string | null
+	) => {
+		if (busyPlan === plan.id) return 'در حال انتقال به درگاه...';
+		if (plan.id === activePlan) return 'پلن فعلی';
+		if (isLowerPlan(plan.id, activePlan)) return 'طرح پایین‌تر';
 		if (plan.id === 'free') return `انتخاب ${planCopy.free.name}`;
 		if (!plan.purchasable) return 'به‌زودی';
 		return plan.featured ? 'شروع با طرح پایه' : `پرداخت ${planCopy[plan.id].name}`;
@@ -212,6 +241,9 @@
 				class="relative z-10 flex-1 flex flex-col justify-center px-4 sm:px-6 lg:px-10 py-10 sm:py-14"
 			>
 				<div class="mx-auto w-full max-w-6xl">
+					<div class="mb-6">
+						<a href="/" class="subscriptions-back">بازگشت</a>
+					</div>
 					<header class="subscriptions-header text-center mb-10 sm:mb-12">
 						<p class="subscriptions-kicker">AloGPT</p>
 						<h1 class="subscriptions-title mt-2">
@@ -267,13 +299,10 @@
 								<button
 									type="button"
 									class="plan-cta mt-8 w-full"
-									disabled={plan.id === currentPlan ||
-										payingPlan !== null ||
-										(plan.id !== 'free' && !plan.purchasable) ||
-										plan.id === 'free'}
+									disabled={isPlanDisabled(plan, currentPlan, payingPlan)}
 									on:click={() => pay(plan.id, plan.purchasable)}
 								>
-									{ctaLabel(plan)}
+									{ctaLabel(plan, currentPlan, payingPlan)}
 								</button>
 							</article>
 						{/each}
@@ -396,6 +425,37 @@
 
 	.subscriptions-header {
 		animation: rise 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+
+	.subscriptions-back {
+		display: inline-flex;
+		align-items: center;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: rgb(55 65 81);
+		padding: 0.45rem 0.9rem;
+		border-radius: 0.75rem;
+		border: 1px solid rgba(17, 24, 39, 0.08);
+		background: rgba(255, 255, 255, 0.7);
+		text-decoration: none;
+	}
+
+	.subscriptions-back:hover {
+		border-color: rgba(16, 185, 129, 0.28);
+		color: rgb(4 120 87);
+		background: rgba(16, 185, 129, 0.08);
+	}
+
+	:global(.dark) .subscriptions-back {
+		color: rgb(229 231 235);
+		border-color: rgba(255, 255, 255, 0.08);
+		background: rgba(255, 255, 255, 0.04);
+	}
+
+	:global(.dark) .subscriptions-back:hover {
+		border-color: rgba(52, 211, 153, 0.32);
+		color: rgb(167 243 208);
+		background: rgba(16, 185, 129, 0.12);
 	}
 
 	.plan-card {
